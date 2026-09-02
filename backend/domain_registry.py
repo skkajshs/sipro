@@ -224,10 +224,12 @@ SAMPLE_TYPES: List[Dict[str, Any]] = [
     {"value": "proofing", "label": "Proofing (sample printing)", "code": "proofing",
      "name": "Proofing (sample printing)", "seq": 30, "active": True,
      "requires_design": True, "applies_to_lines": ["printing"],
-     "measurement_fields": ["delta_e", "repeat_cm", "register_mm"],
-     "notes": "Uji cetak sebelum produksi. WAJIB merujuk kode desain (dulu `if` di "
-              "kode; kini data). Yang diukur: ΔE, panjang repeat, dan ketepatan "
-              "register antar-warna."},
+     # MD-05 (catatan demo 2026-09): proofing cukup FOTO + CATATAN — kolom ukur
+     # (ΔE/repeat/register) dihapus dari bawaan; bukti lampiran tetap wajib.
+     "measurement_fields": [],
+     "notes": "Uji cetak sebelum produksi. WAJIB merujuk kode desain. Hasilnya dinilai "
+              "dari FOTO hasil cetak + catatan — tidak ada kolom ukur (keputusan pemilik, "
+              "MD-05). Pemilik boleh menambah kolom ukur lagi lewat master ini."},
     {"value": "bulk_sample", "label": "Bulk sample", "code": "bulk_sample",
      "name": "Bulk sample", "seq": 90, "active": False,
      "requires_design": False, "applies_to_lines": [],

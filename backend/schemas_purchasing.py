@@ -171,6 +171,8 @@ class SupplierCreate(BaseModel):
     origin_type: str = "local"        # local | import (memengaruhi kebijakan retur)
     country: str = ""                 # negara asal (relevan untuk import)
     return_policy: Optional[ReturnPolicyInput] = None  # embedded; None = pakai default engine
+    # ── PB-02 — rekening bank supplier (SWIFT untuk pembayaran impor) ──
+    bank: Optional[Dict[str, Any]] = None  # {bank_name, account_no, account_holder, swift_code, currency, branch}
 
 
 # ─── Depth #3: Supplier Price-List (koleksi supplier_price_lists, prefix spl_) ─

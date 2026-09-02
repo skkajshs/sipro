@@ -43,6 +43,10 @@ DEFAULT_GLOBAL_SETTINGS: Dict[str, Any] = {
         # Diskon manual DIHAPUS — potongan harga hanya via Harga Khusus (special-price).
         "allow_order_discount": False,
         "allow_item_discount": False,
+        # AS-01 (catatan demo 2026-09) — persetujuan NILAI manajer setelah Admin Sales
+        # DITIADAKAN: alur = Sales membuat → Admin Sales verifikasi → Admin Sales
+        # konfirmasi. Persetujuan KREDIT & HARGA KHUSUS jalurnya terpisah dan TETAP.
+        "require_so_validation": False,
     },
     "inventory": {
         "default_uom": "meter",
@@ -141,9 +145,10 @@ DEFAULT_PAYMENT_TERMS: List[Dict[str, Any]] = [
 ]
 
 DEFAULT_APPROVAL_RULES: List[Dict[str, Any]] = [
-    {"doc_type": "sales_order",    "entity_id": "all", "min_amount": 0,         "max_amount": 50000000,  "required_role": "",        "sort": 1},
-    {"doc_type": "sales_order",    "entity_id": "all", "min_amount": 50000000,  "max_amount": 200000000, "required_role": "manager", "sort": 2},
-    {"doc_type": "sales_order",    "entity_id": "all", "min_amount": 200000000, "max_amount": None,       "required_role": "admin",   "sort": 3},
+    # AS-01 (2026-09) — SO tidak lagi menuntut persetujuan NILAI manajer pada nominal
+    # berapa pun (bawaan). Pemilik bisa memasang ambang lagi di Pusat Pengaturan →
+    # Persetujuan & Ambang. Kredit & harga khusus tidak lewat tabel ini.
+    {"doc_type": "sales_order",    "entity_id": "all", "min_amount": 0,         "max_amount": None,       "required_role": "",        "sort": 1},
     {"doc_type": "discount",       "entity_id": "all", "min_amount": 0,         "max_amount": 10,         "required_role": "",        "sort": 1, "is_percent": True},
     {"doc_type": "discount",       "entity_id": "all", "min_amount": 10,        "max_amount": None,       "required_role": "manager", "sort": 2, "is_percent": True},
     {"doc_type": "purchase_order", "entity_id": "all", "min_amount": 0,         "max_amount": 100000000, "required_role": "",        "sort": 1},

@@ -53,6 +53,20 @@ async def list_suppliers(request: Request, entity_id: str = None, status: str = 
     return rows
 
 
+_BANK_FIELDS = ("bank_name", "branch", "account_no", "account_holder", "swift_code", "currency")
+
+
+def _clean_bank(bank: Any) -> Dict[str, str]:
+    """PB-02 — rekening bank supplier: simpan hanya kolom yang dikenal, rapikan SWIFT (huruf besar)."""
+    if not isinstance(bank, dict):
+        return {}
+    out = {k: str(bank.get(k) or "").strip() for k in _BANK_FIELDS}
+    out["swift_code"] = out["swift_code"].upper().replace(" ", "")
+    out["currency"] = out["currency"].upper() or ("IDR" if out["bank_name"] else "")
+    return out
+
+
+
 @router.post("/suppliers")
 async def create_supplier(payload: SupplierCreate, request: Request) -> Dict[str, Any]:
     """Buat master supplier baru."""
@@ -95,6 +109,7 @@ async def create_supplier(payload: SupplierCreate, request: Request) -> Dict[str
         "origin_type": origin_type,
         "country": (payload.country or "").strip(),
         "return_policy": return_policy,
+        "bank": _clean_bank(payload.bank),
         "created_by": payload.created_by,
         "created_at": now_iso(),
         "updated_at": now_iso(),
@@ -133,8 +148,10 @@ async def update_supplier(supplier_id: str, payload: GenericPatch, request: Requ
         raise HTTPException(status_code=404, detail="Supplier tidak ditemukan")
     allowed = {"name", "npwp", "pic_name", "phone", "email", "address", "city",
                "goods_type", "payment_term_code", "lead_time_days", "entity_id", "notes", "status",
-               "origin_type", "country", "return_policy"}
+               "origin_type", "country", "return_policy", "bank"}
     updates = {k: v for k, v in (payload.data or {}).items() if k in allowed}
+    if "bank" in updates:
+        updates["bank"] = _clean_bank(updates["bank"])
     if not updates:
         raise HTTPException(status_code=400, detail="Tidak ada field valid untuk diupdate")
     if "lead_time_days" in updates:

@@ -66,7 +66,7 @@ async def list_colors(q: str = "", family: str = "", system: str = "",
     if q:
         s = q.lower()
         rows = [r for r in rows
-                if s in f"{r.get('code','')}{r.get('name','')}{r.get('family','')}".lower()]
+                if s in f"{r.get('code','')}{r.get('name','')}{r.get('factory_name','')}{r.get('family','')}".lower()]
     return [safe_doc(r) for r in rows]
 
 
@@ -89,6 +89,7 @@ async def create_color(data: Dict[str, Any], actor_name: str = "") -> Dict[str, 
         "id": new_id(PREFIX),
         "code": code,
         "name": name,
+        "factory_name": (data.get("factory_name") or "").strip(),
         "hex": f"#{hex_norm}",
         "system": system,
         "family": (data.get("family") or "").strip() or "Lainnya",
@@ -105,6 +106,8 @@ async def update_color(color_id: str, patch: Dict[str, Any]) -> Optional[Dict[st
     upd: Dict[str, Any] = {}
     if patch.get("name") is not None:
         upd["name"] = str(patch["name"]).strip()
+    if patch.get("factory_name") is not None:
+        upd["factory_name"] = str(patch["factory_name"]).strip()
     if patch.get("hex") is not None:
         hex_norm = normalize_hex(patch["hex"])
         if not hex_norm:

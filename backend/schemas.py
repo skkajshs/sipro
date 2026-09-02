@@ -910,10 +910,12 @@ class ColorCreate(BaseModel):
     hex: str                              # '#RRGGBB' atau 'RRGGBB'
     system: str = "KN"                    # TPX | TCX | C | U | KN
     family: str = ""                      # kelompok warna (Merah/Biru/...)
+    factory_name: str = ""                # MD-07 — nama versi pabrik/supplier untuk warna yang sama
 
 
 class ColorPatch(BaseModel):
     name: Optional[str] = None
+    factory_name: Optional[str] = None
     hex: Optional[str] = None
     system: Optional[str] = None
     family: Optional[str] = None

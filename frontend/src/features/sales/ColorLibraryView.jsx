@@ -55,7 +55,7 @@ export default function ColorLibraryView({ currentUser }) {
     return colors.filter((c) => {
       if (family && c.family !== family) return false;
       if (system && c.system !== system) return false;
-      if (s && !`${c.code}${c.name}${c.family}`.toLowerCase().includes(s)) return false;
+      if (s && !`${c.code}${c.name}${c.factory_name || ""}${c.family}`.toLowerCase().includes(s)) return false;
       return true;
     });
   }, [colors, q, family, system]);
@@ -124,6 +124,9 @@ export default function ColorLibraryView({ currentUser }) {
                       <span className="shrink-0 rounded bg-[#F5F5F7] px-1 text-[9px] font-bold text-[#6B6B73]">{c.system}</span>
                     </div>
                     <p className="truncate text-[10.5px] text-[#6B6B73]">{c.name}</p>
+                    {c.factory_name && (
+                      <p className="truncate text-[10.5px] text-[#6B6B73]" data-testid={`color-factory-name-${c.id}`} title="Nama versi pabrik/supplier">pabrik: {c.factory_name}</p>
+                    )}
                     <p className="mt-0.5 flex items-center justify-between text-[9.5px] text-[#9A9BA3]">
                       <span className="truncate">{c.family || "—"}</span>
                       <span className="font-mono">{c.hex}</span>
@@ -176,7 +179,7 @@ function Kpi({ label, value, icon: Icon, tone = "#0058CC", testId }) {
 
 function ColorModal({ mode, color, onClose, onSaved, onError }) {
   const [form, setForm] = useState({
-    code: color?.code || "", name: color?.name || "", hex: color?.hex || "#",
+    code: color?.code || "", name: color?.name || "", factory_name: color?.factory_name || "", hex: color?.hex || "#",
     system: color?.system || "KN", family: color?.family || "", status: color?.status || "active",
   });
   const [saving, setSaving] = useState(false);
@@ -190,7 +193,7 @@ function ColorModal({ mode, color, onClose, onSaved, onError }) {
     try {
       if (mode === "edit") {
         await axios.patch(`${API}/color-library/${color.id}`, {
-          name: form.name, hex: form.hex, system: form.system, family: form.family, status: form.status,
+          name: form.name, factory_name: form.factory_name, hex: form.hex, system: form.system, family: form.family, status: form.status,
         });
       } else {
         await axios.post(`${API}/color-library`, form);
@@ -216,8 +219,11 @@ function ColorModal({ mode, color, onClose, onSaved, onError }) {
               <Field label="Kode Warna *">
                 <input data-testid="color-form-code" className="field" placeholder="KN-BLU-01" value={form.code} onChange={set("code")} disabled={mode === "edit"} autoFocus={mode === "create"} />
               </Field>
-              <Field label="Nama Warna *">
+              <Field label="Nama Warna KN *">
                 <input data-testid="color-form-name" className="field" placeholder="Biru Indigo" value={form.name} onChange={set("name")} />
+              </Field>
+              <Field label="Nama versi pabrik / supplier">
+                <input data-testid="color-form-factory-name" className="field" placeholder="mis. Navy 19-4028 (nama di pabrik)" value={form.factory_name} onChange={set("factory_name")} />
               </Field>
             </div>
           </div>

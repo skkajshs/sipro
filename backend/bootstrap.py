@@ -467,6 +467,31 @@ async def ensure_config_defaults() -> None:
     """Seed pengaturan default (settings/payment_terms/approval_rules) — Fase 1A, idempotent."""
     from services.config_service import seed_config_defaults
     await seed_config_defaults()
+    await _migrate_as01_value_approval()
+
+
+async def _migrate_as01_value_approval() -> None:
+    """AS-01 (2026-09) — sekali jalan: matikan persetujuan NILAI SO bawaan lama (50jt/200jt).
+
+    Hanya menyentuh aturan `sales_order` yang PERSIS sama dengan bawaan lama; aturan yang
+    sudah diubah pemilik tidak disentuh. Ditandai di `system_settings` supaya tidak
+    mengulang bila pemilik kemudian memasang ambang lagi dengan sengaja.
+    """
+    marker = {"scope": "__migrations__"}
+    done = await db.system_settings.find_one(marker, {"_id": 0, "as01_value_approval": 1})
+    if done and done.get("as01_value_approval"):
+        return
+    legacy = [(0, 50000000, ""), (50000000, 200000000, "manager"), (200000000, None, "admin")]
+    rules = await db.approval_rules.find({"doc_type": "sales_order", "entity_id": "all"}, {"_id": 0}).to_list(50)
+    sig = sorted((float(r.get("min_amount") or 0), r.get("max_amount"), r.get("required_role") or "") for r in rules)
+    if sig == sorted((float(lo), hi, role) for lo, hi, role in legacy):
+        await db.approval_rules.delete_many({"doc_type": "sales_order", "entity_id": "all"})
+        await db.approval_rules.insert_one({
+            "id": new_id("aprule"), "doc_type": "sales_order", "entity_id": "all",
+            "min_amount": 0, "max_amount": None, "required_role": "", "sort": 1, "active": True,
+            "created_at": now_iso(), "updated_at": now_iso(),
+            "note": "AS-01: persetujuan nilai manajer ditiadakan (keputusan pemilik 2026-09)"})
+    await db.system_settings.update_one(marker, {"$set": {"as01_value_approval": now_iso()}}, upsert=True)
 
 
 # ─── EPIC2: Master Kategori Produk + Snapshot SO ─────────────────────────────

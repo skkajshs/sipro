@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FlaskConical, Save, X } from "lucide-react";
 import KNSelect from "../../components/KNSelect";
 import { overlayDismiss } from "@/utils/overlayDismiss";
-import { createSpec, listColors, listDesigns } from "./rndApi";
+import { createSpec, designFileUrl, listColors, listDesigns } from "./rndApi";
 import { errMsg } from "./rndMeta";
 import { typeLabel, typeMeta, typeOptions } from "./sampleTypeMeta";
 
@@ -43,6 +43,8 @@ export default function SpecFormModal({ selectedEntity, types = [], onClose, onS
     color_id: "", design_id: "", target_price: "", notes: "",
   });
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+  const selColor = useMemo(() => colors.find((c) => c.id === f.color_id), [colors, f.color_id]);
+  const selDesign = useMemo(() => designs.find((d) => d.id === f.design_id), [designs, f.design_id]);
 
   useEffect(() => {
     listColors().then((c) => setColors(Array.isArray(c) ? c : c?.items || [])).catch(() => {});
@@ -169,17 +171,47 @@ export default function SpecFormModal({ selectedEntity, types = [], onClose, onS
 
           <div className="grid gap-2.5 md:grid-cols-2">
             <Field label="Warna target (wajib dari Pustaka Warna)">
+              {/* MD-03 — kotak warna ikut tampil di daftar & ringkasan, bukan hanya kode. */}
               <KNSelect data-testid="spec-color" className="field" value={f.color_id}
                 options={[{ value: "", label: "— belum ditentukan —" },
-                  ...colors.map((c) => ({ value: c.id, label: `${c.code} · ${c.name}` }))]}
+                  ...colors.map((c) => ({ value: c.id, label: `${c.code} · ${c.name}${c.factory_name ? ` (${c.factory_name})` : ""}`,
+                    render: (
+                      <span className="inline-flex min-w-0 items-center gap-2" data-testid={`spec-color-swatch-${c.id}`}>
+                        <span className="h-4 w-4 shrink-0 rounded border border-[#E5E5EA]" style={{ backgroundColor: c.hex }} />
+                        <span className="truncate">{c.code} · {c.name}{c.factory_name ? <span className="text-[#9A9BA3]"> · pabrik: {c.factory_name}</span> : null}</span>
+                      </span>) }))]}
                 onValueChange={(v) => set("color_id", v)} />
+              {selColor && (
+                <div className="mt-1.5 flex items-center gap-2 text-[11px] text-[#3C3C43]" data-testid="spec-color-preview">
+                  <span className="h-8 w-8 rounded-md border border-[#E5E5EA]" style={{ backgroundColor: selColor.hex }} />
+                  <span>{selColor.code} · {selColor.name} <span className="font-mono text-[#9A9BA3]">{selColor.hex}</span></span>
+                </div>
+              )}
             </Field>
             <Field label={`Desain / pattern${hintRequiresDesign ? " (wajib untuk jenis ini)" : ""}`}>
               <KNSelect data-testid="spec-design" className="field" value={f.design_id}
                 options={[{ value: "", label: "— tanpa desain —" },
-                  ...designs.map((d) => ({ value: d.id,
-                    label: `${d.code || "tanpa kode"} · ${d.title} (v${d.version || 1})` }))]}
+                  ...designs.map((d) => {
+                    const cover = (d.files || [])[0];
+                    return { value: d.id,
+                      label: `${d.code || "tanpa kode"} · ${d.title} (v${d.version || 1})`,
+                      render: (
+                        <span className="inline-flex min-w-0 items-center gap-2" data-testid={`spec-design-thumb-${d.id}`}>
+                          {cover
+                            ? <img src={designFileUrl(d.id, cover.id)} alt="" className="h-6 w-6 shrink-0 rounded object-cover border border-[#E5E5EA]" />
+                            : <span className="h-6 w-6 shrink-0 rounded bg-[#F5F5F7] border border-[#E5E5EA]" />}
+                          <span className="truncate">{d.code || "tanpa kode"} · {d.title} (v{d.version || 1})</span>
+                        </span>) };
+                  })]}
                 onValueChange={(v) => set("design_id", v)} />
+              {selDesign && (
+                <div className="mt-1.5 flex items-center gap-2 text-[11px] text-[#3C3C43]" data-testid="spec-design-preview">
+                  {(selDesign.files || [])[0]
+                    ? <img src={designFileUrl(selDesign.id, selDesign.files[0].id)} alt={selDesign.title} className="h-14 w-14 rounded-md object-cover border border-[#E5E5EA]" />
+                    : <span className="flex h-14 w-14 items-center justify-center rounded-md bg-[#F5F5F7] text-[9px] text-[#9A9BA3]">tanpa artwork</span>}
+                  <span>{selDesign.code || "tanpa kode"} · {selDesign.title} <span className="text-[#9A9BA3]">v{selDesign.version || 1}</span></span>
+                </div>
+              )}
             </Field>
           </div>
 
@@ -202,11 +234,9 @@ export default function SpecFormModal({ selectedEntity, types = [], onClose, onS
             </Field>
           </div>
 
-          <div className="grid gap-2.5 md:grid-cols-2">
-            <Field label="Target harga jual (Rp)">
-              <input className="field" data-testid="spec-price-input" value={f.target_price}
-                onChange={(e) => set("target_price", e.target.value)} placeholder="48000" />
-            </Field>
+          {/* MD-04 — kolom target harga jual DIHAPUS dari formulir (harga jual ditetapkan di
+              daftar harga per PT / harga langganan). Data lama tetap tersimpan, hanya tak diisi di sini. */}
+          <div className="grid gap-2.5">
             <Field label="Catatan">
               <input className="field" data-testid="spec-notes-input" value={f.notes}
                 onChange={(e) => set("notes", e.target.value)}

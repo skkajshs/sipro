@@ -349,6 +349,22 @@ E("purchasing.price_deviation_approval_percent", group="persetujuan", type="pct"
   example="Harga acuan Rp 100.000 · PO Rp 115.000 (+15%) · ambang 10% → wajib approval",
   consumers=("routers/purchase_orders.py", "services/pr_sourcing_service.py"), risk="high")
 
+# AS-01 (catatan demo 2026-09) — persetujuan NILAI manajer setelah Admin Sales DITIADAKAN.
+E("sales.require_so_validation", group="persetujuan", type="bool",
+  default=False, scopes=("global", "entity"),
+  label="Pesanan wajib disahkan manajer sebelum dikonfirmasi (persetujuan nilai)",
+  help="Bila MATI (bawaan sejak keputusan pemilik AS-01), pesanan yang lolos verifikasi "
+       "Admin Sales dan tidak menyentuh kredit/harga khusus langsung siap dikonfirmasi — "
+       "tanpa singgah ke manajer. Persetujuan KREDIT dan HARGA KHUSUS tetap wajib dan tidak "
+       "terpengaruh sakelar ini. Ambang nilai yang masih menuntut manajer diatur di tabel "
+       "Ambang Persetujuan (dok. sales_order).",
+  impact="Alur menjadi: Sales membuat → Admin Sales verifikasi → Admin Sales konfirmasi. "
+         "Menyalakan kembali membuat setiap pesanan baru menunggu pengesahan manajer.",
+  example="SO Rp 75 jt tanpa kredit berlebih → langsung 'Siap dikonfirmasi' di Meja Admin Sales",
+  consumers=("services/so_approvals.py:require_validation_default",
+             "routers/sales_orders.py", "routers/sales_orders_extra.py"),
+  related=("sales_admin.require_verification_before_confirm",), risk="high")
+
 # FASE E-8 (E8.13) — VERIFIKASI ADMINISTRATIF sebelum Konfirmasi SO.
 # Bawaan SENGAJA MATI: instalasi yang sudah berjalan tidak boleh mendadak menolak
 # konfirmasi yang tadinya sah. Pemilik menyalakannya di sini bila ingin "tidak ada

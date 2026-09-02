@@ -10,6 +10,7 @@ import ConfirmModal from "../../components/ConfirmModal";
 import FormModal from "../../components/FormModal";
 import PaginationBar from "../../components/PaginationBar";
 import { ReturnPolicyEditor } from "../../components/ReturnPolicyEditor";
+import { SupplierBankFields, bankSummary } from "./SupplierBankFields";
 import { usePagedList } from "../../hooks/usePagedList";
 
 // FASE P6 — kolom Unduh CSV (mengikuti kolom tabel supplier).
@@ -42,6 +43,7 @@ const EMPTY_FORM = {
   address: "", city: "", goods_type: "", payment_term_code: "", lead_time_days: "",
   entity_id: "", notes: "",
   origin_type: "local", country: "", return_policy: { ...DEFAULT_RETURN_POLICY },
+  bank: {},
 };
 
 function StatusPill({ status }) {
@@ -102,6 +104,7 @@ export default function SuppliersView({ currentUser, selectedEntity }) {
       entity_id: s.entity_id || "", notes: s.notes || "",
       origin_type: s.origin_type || "local", country: s.country || "",
       return_policy: { ...DEFAULT_RETURN_POLICY, ...(s.return_policy || {}) },
+      bank: { ...(s.bank || {}) },
     });
     setShowForm(true);
   }
@@ -266,6 +269,10 @@ export default function SuppliersView({ currentUser, selectedEntity }) {
               value={form.return_policy}
               isImport={form.origin_type === "import"}
               onChange={(rp) => setForm({ ...form, return_policy: rp })} />
+            <SupplierBankFields
+              value={form.bank}
+              isImport={form.origin_type === "import"}
+              onChange={(bank) => setForm({ ...form, bank })} />
             <Field label="Catatan">
               <textarea data-testid="supplier-notes-input" value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })} className="field" rows="2" placeholder="Catatan tambahan..." />
@@ -310,6 +317,9 @@ export default function SuppliersView({ currentUser, selectedEntity }) {
                   <div className="min-w-0">
                     <p className="text-[11px] tabular-nums truncate">{s.npwp || "—"}</p>
                     <p className="text-[10.5px] text-[#6B6B73] truncate">{s.pic_name} {s.phone ? `· ${s.phone}` : ""}</p>
+                    {bankSummary(s.bank) && (
+                      <p className="text-[10px] text-[#0058CC] truncate" data-testid={`supplier-bank-${s.id}`} title={bankSummary(s.bank)}>{bankSummary(s.bank)}</p>
+                    )}
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] truncate">{s.city || "—"}</p>

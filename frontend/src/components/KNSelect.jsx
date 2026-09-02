@@ -91,7 +91,7 @@ function KNCombobox({ value, onValueChange, options, className, placeholder, dis
               color: selected ? "inherit" : "#9A9BA3",
             }}
           >
-            {selected ? selected.label : placeholder}
+            {selected ? (selected.render || selected.label) : placeholder}
           </span>
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </button>
@@ -118,7 +118,7 @@ function KNCombobox({ value, onValueChange, options, className, placeholder, dis
                       String(opt.value) === String(value ?? "") ? "opacity-100" : "opacity-0"
                     }`}
                   />
-                  {opt.label}
+                  {opt.render || opt.label}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -206,7 +206,7 @@ export function KNSelect({
         {safeOptions.map((opt) => (
           <SelectItem key={opt.safeValue} value={opt.safeValue}
             data-testid={testId ? `${testId}-option-${String(opt.value) || "empty"}` : undefined}>
-            {opt.label}
+            {opt.render || opt.label}
           </SelectItem>
         ))}
       </SelectContent>

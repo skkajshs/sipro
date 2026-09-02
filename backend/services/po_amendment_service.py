@@ -90,6 +90,30 @@ async def _resolve_warehouse(po: Dict[str, Any], payload, has_receipt: bool) -> 
     return wh
 
 
+def _assert_received_line_locked(sku: str, item_in, old_items, rq: float) -> None:
+    """T5 — baris yang barangnya sudah diterima TERKUNCI: qty/satuan/harga/diskon tak boleh berubah."""
+    old = next((it for it in old_items if it["product_id"] == item_in.product_id), None)
+    if not old:
+        return
+    changed = []
+    if abs(float(item_in.quantity or 0) - float(old.get("quantity") or 0)) > 0.001:
+        changed.append(f"qty {float(old.get('quantity') or 0):g}→{float(item_in.quantity):g}")
+    old_unit = str(old.get("unit") or "").strip().lower()
+    new_unit = str(item_in.unit or old.get("unit") or "").strip().lower()
+    if new_unit != old_unit:
+        changed.append(f"satuan {old.get('unit')}→{item_in.unit}")
+    new_price = float(item_in.price or 0)
+    if new_price > 0 and abs(new_price - float(old.get("price") or 0)) > 0.001:
+        changed.append(f"harga {float(old.get('price') or 0):,.0f}→{new_price:,.0f}".replace(",", "."))
+    if abs(float(item_in.discount_percent or 0) - float(old.get("discount_percent") or 0)) > 0.001:
+        changed.append(f"diskon {float(old.get('discount_percent') or 0):g}%→{float(item_in.discount_percent or 0):g}%")
+    if changed:
+        raise HTTPException(status_code=400, detail=(
+            f"Baris {sku} sudah diterima {rq:g} — terkunci dari revisi ({', '.join(changed)}). "
+            "Barang yang sudah masuk gudang tidak bisa diubah qty/satuan/harga/diskonnya; "
+            "buat PO baru untuk tambahan, atau retur beli bila ada selisih."))
+
+
 async def _build_items(payload, old_items, received_map, supplier_id) -> List[Dict[str, Any]]:
     """Bangun daftar item baru + guard partial receiving (3.b)."""
     if payload.items is None:
@@ -115,7 +139,11 @@ async def _build_items(payload, old_items, received_map, supplier_id) -> List[Di
         if float(item_in.quantity) < rq - 0.001:
             raise HTTPException(status_code=400, detail=(
                 f"Qty {product['sku']} ({item_in.quantity:g}) tak boleh < qty diterima ({rq:g})."))
+        if rq > 0:
+            _assert_received_line_locked(product["sku"], item_in, old_items, rq)
         price = float(item_in.price or 0)
+        if rq > 0:
+            price = float(next((it.get("price") for it in old_items if it["product_id"] == item_in.product_id), price) or price)
         if price <= 0:
             resolved = await resolve_price(supplier_id, item_in.product_id, item_in.quantity)
             price = float(resolved.get("price", 0) or 0) or float(product.get("price", 0) or 0)

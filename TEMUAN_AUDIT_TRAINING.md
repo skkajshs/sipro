@@ -21,7 +21,7 @@
 | # | Kasus | Temuan |
 |---|-------|--------|
 | T4 | B6 | UI menjanjikan "memutuskan ulang akan menambah jejak baru", tetapi ketiga jalur pemenuhan dijawab 400 setelah keputusan pertama (reorder: PR terbuka; wait: tak ada barang masuk; interco: butuh sumber). Kartu Reorder tetap `available:true` walau pasti gagal. API juga hanya menyimpan 1 keputusan terakhir — klaim "jejak lama tidak dihapus" tak terbukti. |
-| T5 | G7 | Dokumen: baris PO yang barangnya sudah diterima **terkunci dari revisi**. Kenyataan: amandemen baris ber-`received_qty` diterima (200) selama qty baru ≥ qty diterima; hanya qty < diterima yang ditolak. |
+| T5 | G7 | Dokumen: baris PO yang barangnya sudah diterima **terkunci dari revisi**. Kenyataan: amandemen baris ber-`received_qty` diterima (200) selama qty baru ≥ qty diterima; hanya qty < diterima yang ditolak. **✅ SELESAI 2026-09-02 (iter279)** — `_assert_received_line_locked` di `po_amendment_service.py`: qty/satuan/harga/diskon baris ber-penerimaan berubah → 400 "terkunci dari revisi"; UI `POAmendModal` menonaktifkan kolom baris tsb + ikon gembok. 16/16 pytest + UI PASS. |
 
 ## 🟡 SEDANG
 
@@ -69,5 +69,5 @@
 ## Urutan pengerjaan
 1. ~~T1 (gerbang confirm)~~ — SELESAI: gerbang default ON + gerbang persetujuan manajer.
 2. ~~T2 (PIN sales_admin) + T3 (isolasi detail inspeksi)~~ — SELESAI.
-3. **BERIKUTNYA:** T4–T5, lalu T6–T9, T10–T11.
+3. ~~T4~~ (iter278) · ~~T5~~ (iter279) — SELESAI. **BERIKUTNYA:** T6–T9 (T6 lencana lini sudah array-aware di `PoBoardView` — cek ulang saja), T10–T11.
 4. Paket seed demo (D1–D5) supaya sesi training bisa mengikuti dokumen apa adanya.

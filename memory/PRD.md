@@ -78,10 +78,10 @@ tersisa action items minor).
   iter275 A4 + Alur F PASS, iter276 DD2 404.
 
 ## Backlog / Prioritas
-- **P1 berikutnya (TEMUAN_AUDIT_TRAINING.md):** T4 putuskan-ulang pemenuhan (400 + jejak),
-  T5 kunci baris PO yang sudah diterima; lalu T6–T9 (lencana lini boolean, makloon
+- **P1 berikutnya (TEMUAN_AUDIT_TRAINING.md):** ~~T4~~ (iter278) · ~~T5~~ (iter279, 2026-09-02:
+  baris PO ber-penerimaan terkunci dari revisi — backend 400 + UI disabled); lalu T7–T9 (makloon
   "Sebagian", my-queue memuat makloon_claim, saran reorder R&D/warehouse_id), T10–T11 minor;
-  paket seed demo D1–D5.
+  paket seed demo D1–D5. T6 (lencana lini) sudah array-aware di `PoBoardView.jsx`.
 - ~~P2: refactor readability `merged_max` di PATCH approval_rules~~ — SELESAI 2026-06
   (ternary bersarang → dua baris jelas; POC approval coverage tetap 41/41, PATCH menolak
   min>max dengan benar). Bug #7 badge tab "Menunggu" juga SELESAI (screenshot before/after).

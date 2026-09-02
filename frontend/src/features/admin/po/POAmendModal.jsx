@@ -44,7 +44,7 @@ export default function POAmendModal({
   const [supplierName, setSupplierName] = useState(po.supplier_name || "");
   const [supplierContact, setSupplierContact] = useState(po.supplier_contact || "");
   const [warehouseId, setWarehouseId] = useState(po.warehouse_id || "");
-  const [eta, setEta] = useState(po.expected_delivery_date || "");
+  const [eta, setEta] = useState(String(po.expected_delivery_date || "").slice(0, 10));
   const [notes, setNotes] = useState(po.notes || "");
   const [orderDisc, setOrderDisc] = useState(Number(po.order_discount_percent || 0));
   const [taxMode, setTaxMode] = useState(po.tax_mode || "");
@@ -157,7 +157,7 @@ export default function POAmendModal({
         {hasReceipt && (
           <div data-testid="po-amend-receipt-note" className="mt-2 flex items-start gap-2 rounded-md border border-[#D6E4FF] bg-[#F5F9FF] px-2.5 py-2 text-[11.5px] text-[#0058CC]">
             <Lock size={13} className="mt-0.5 shrink-0" />
-            <span>PO ini sudah ada penerimaan barang. Gudang terkunci, qty item tak boleh di bawah jumlah yang sudah diterima, dan item ber-penerimaan tidak dapat dihapus.</span>
+            <span>PO ini sudah ada penerimaan barang. Gudang terkunci, dan <b>baris yang barangnya sudah diterima terkunci dari revisi</b> (qty, satuan, harga, diskon tidak bisa diubah; baris tidak dapat dihapus). Tambahkan baris baru untuk kebutuhan tambahan.</span>
           </div>
         )}
 
@@ -224,15 +224,20 @@ export default function POAmendModal({
                 <div key={it.product_id} data-testid={`po-amend-item-${i}`}
                   className="grid grid-cols-[1fr_84px_78px_96px_56px_64px_28px] items-center gap-1 px-2.5 py-1.5 border-b border-[#EFF0F2] last:border-0 text-[11.5px]">
                   <span className="truncate" title={`${it.sku} — ${it.product_name}`}>{it.sku}<span className="text-[#9A9BA3]"> · {it.product_name}</span></span>
-                  <input data-testid={`po-amend-item-qty-${i}`} type="number" min={it.received_qty || 0} value={it.quantity}
-                    onChange={(e) => updateItem(i, { quantity: parseFloat(e.target.value) || 0 })} className="field !py-1 !px-1.5 text-[11px]" />
-                  <KNSelect data-testid={`po-amend-item-unit-${i}`} value={it.unit} onValueChange={(v) => updateItem(i, { unit: v })}
+                  <input data-testid={`po-amend-item-qty-${i}`} type="number" min={it.received_qty || 0} value={it.quantity} disabled={locked}
+                    title={locked ? "Sudah diterima — baris terkunci dari revisi" : undefined}
+                    onChange={(e) => updateItem(i, { quantity: parseFloat(e.target.value) || 0 })} className="field !py-1 !px-1.5 text-[11px] disabled:bg-gray-100 disabled:text-gray-500" />
+                  <KNSelect data-testid={`po-amend-item-unit-${i}`} value={it.unit} disabled={locked} onValueChange={(v) => updateItem(i, { unit: v })}
                     className="field !py-1 !px-1.5 text-[11px]" options={unitOptionsFor(prod, it.unit)} />
-                  <input data-testid={`po-amend-item-price-${i}`} type="number" min="0" value={it.price}
-                    onChange={(e) => updateItem(i, { price: parseFloat(e.target.value) || 0 })} className="field !py-1 !px-1.5 text-[11px]" />
-                  <input data-testid={`po-amend-item-disc-${i}`} type="number" min="0" max="100" value={it.discount_percent}
-                    onChange={(e) => updateItem(i, { discount_percent: parseFloat(e.target.value) || 0 })} className="field !py-1 !px-1.5 text-[11px]" />
-                  <span className="tabular-nums text-[10.5px] text-[#6B6B73] text-center">{locked ? `${it.received_qty}` : "—"}</span>
+                  <input data-testid={`po-amend-item-price-${i}`} type="number" min="0" value={it.price} disabled={locked}
+                    title={locked ? "Sudah diterima — baris terkunci dari revisi" : undefined}
+                    onChange={(e) => updateItem(i, { price: parseFloat(e.target.value) || 0 })} className="field !py-1 !px-1.5 text-[11px] disabled:bg-gray-100 disabled:text-gray-500" />
+                  <input data-testid={`po-amend-item-disc-${i}`} type="number" min="0" max="100" value={it.discount_percent} disabled={locked}
+                    title={locked ? "Sudah diterima — baris terkunci dari revisi" : undefined}
+                    onChange={(e) => updateItem(i, { discount_percent: parseFloat(e.target.value) || 0 })} className="field !py-1 !px-1.5 text-[11px] disabled:bg-gray-100 disabled:text-gray-500" />
+                  <span data-testid={`po-amend-item-received-${i}`} className="tabular-nums text-[10.5px] text-[#6B6B73] text-center inline-flex items-center justify-center gap-0.5">
+                    {locked ? <><Lock size={9} /> {it.received_qty}</> : "—"}
+                  </span>
                   <button data-testid={`po-amend-item-remove-${i}`} onClick={() => removeItem(i)} disabled={locked}
                     title={locked ? "Sudah diterima — tidak bisa dihapus" : "Hapus item"}
                     className={`justify-self-end ${locked ? "text-gray-300 cursor-not-allowed" : "text-red-400 hover:text-red-600"}`}>

@@ -151,6 +151,17 @@ export default function MakloonOrderDetailPanel({ mkoId, currentUser, onBack, on
           </ul>
         </div>
       )}
+      {/* T7 — hasil kurang dari estimasi: SPK "Sebagian" sampai klaim selisih diputus. */}
+      {data.completion_hold?.message && (
+        <div className="mb-3 rounded-lg border border-[#F3C6BF] bg-[#FDECEA] px-3 py-2"
+          data-testid="mko-completion-hold">
+          <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase text-[#A8221A]">
+            <TriangleAlert size={12} /> SPK belum bisa selesai — klaim selisih menunggu keputusan
+          </p>
+          <p className="mt-1 text-[11.5px] text-[#A8221A]">{data.completion_hold.message}</p>
+        </div>
+      )}
+
 
       <div className="grid gap-3 lg:grid-cols-[300px_1fr]">
         {/* Ringkasan & Costing */}
@@ -355,14 +366,25 @@ export default function MakloonOrderDetailPanel({ mkoId, currentUser, onBack, on
 }
 
 function IssueModal({ step, warehouses, defaultWh, busy, onClose, onConfirm }) {
-  const [wh, setWh] = useState(defaultWh || (warehouses[0]?.id || ""));
+  // Stok bahan MILIK entitas SPK per gudang (dihitung server) — gudang tanpa stok
+  // tetap tampil tetapi diberi tanda, supaya 409 "stok tidak cukup" tidak jadi kejutan.
+  const stockByWh = Object.fromEntries((step.source_stock || []).map((r) => [r.warehouse_id, r.available_qty]));
+  const need = parseFloat(step.input_qty) || 0;
+  const hasStock = (id) => (stockByWh[id] || 0) + 0.01 >= need;
+  const firstOk = (step.source_stock || []).find((r) => r.available_qty + 0.01 >= need)?.warehouse_id;
+  const [wh, setWh] = useState((defaultWh && hasStock(defaultWh) ? defaultWh : firstOk) || defaultWh || (warehouses[0]?.id || ""));
   const [docUom, setDocUom] = useState("");
   const [docQty, setDocQty] = useState("");
   // Memuat katalog satuan (dan membagikannya ke penyimpan modul). Dipanggil DI SINI,
   // bukan mengandalkan layar lain sudah memanggilnya: pemilih yang bergantung pada
   // urutan kunjungan layar akan tampak "hanya berisi satu pilihan" secara acak.
   const { loading: uomLoading } = useUomConversions();
-  const opts = warehouses.map((w) => ({ value: w.id, label: `${w.name} (${w.code})` }));
+  const opts = warehouses.map((w) => ({
+    value: w.id,
+    label: `${w.name} (${w.code}) · tersedia ${formatQty(stockByWh[w.id] || 0)} ${step.input_unit || ""}`,
+  }));
+  const selectedStock = stockByWh[wh] || 0;
+  const insufficient = !!wh && !hasStock(wh);
   // FASE U — satuan surat jalan mitra dari MASTER satuan. Dulu 7 nilai diketik di
   // sini; satuan yang ditambah pemilik (mis. `panel`) tidak pernah bisa dipilih,
   // sehingga penerimaan hasil makloon dalam satuan itu harus dikonversi manual di
@@ -384,6 +406,14 @@ function IssueModal({ step, warehouses, defaultWh, busy, onClose, onConfirm }) {
           <p className="text-[12px] text-[#3C3C43]">Keluarkan <b>{formatQty(step.input_qty)} {step.input_unit}</b> {step.input_name} ke <b>{step.makloon_name}</b>. Stok berpindah ke bucket <b>Di Makloon (WIP-Vendor)</b>.</p>
           <label className="block"><span className="mb-1 block text-[10.5px] font-semibold text-[#6B6B73]">Gudang Sumber Bahan</span>
             <KNSelect data-testid="mko-issue-warehouse" className="field" value={wh} onValueChange={setWh} options={opts} /></label>
+          {wh && (
+            <p data-testid="mko-issue-stock-hint"
+              className={`rounded-md px-2.5 py-1.5 text-[11px] ${insufficient ? "bg-[#FDECEA] text-[#A8221A]" : "bg-[#E6F4EA] text-[#1B7F4B]"}`}>
+              {insufficient
+                ? <>Stok tersedia di gudang ini hanya <b>{formatQty(selectedStock)} {step.input_unit}</b>, butuh <b>{formatQty(need)} {step.input_unit}</b> — pilih gudang lain atau terima/transfer bahan lebih dulu. Stok berkurang dari bucket <b>Tersedia</b> hanya setelah issue berhasil.</>
+                : <>Stok tersedia <b>{formatQty(selectedStock)} {step.input_unit}</b> — cukup. Setelah issue, <b>{formatQty(need)} {step.input_unit}</b> pindah dari Tersedia ke <b>Di Makloon</b> dan hilang dari ATP.</>}
+            </p>
+          )}
           <div className="rounded-lg border border-[#EFF0F2] bg-[#FAFBFC] p-2.5">
             <p className="mb-1.5 text-[10.5px] font-semibold text-[#6B6B73]">Satuan surat jalan mitra (opsional — sistem mengonversi & menyimpan jejaknya)</p>
             <div className="grid grid-cols-2 gap-2">
@@ -395,7 +425,7 @@ function IssueModal({ step, warehouses, defaultWh, busy, onClose, onConfirm }) {
         </div>
         <div className="flex justify-end gap-2 border-t border-[#EFF0F2] px-4 py-3">
           <button className="secondary-button" onClick={onClose}>Batal</button>
-          <button data-testid="mko-issue-confirm" className="primary-button" disabled={busy || !wh} onClick={() => onConfirm(wh, docUom, docQty)}><Send size={13} /> {busy ? "Memproses…" : "Issue Sekarang"}</button>
+          <button data-testid="mko-issue-confirm" className="primary-button" disabled={busy || !wh || insufficient} onClick={() => onConfirm(wh, docUom, docQty)}><Send size={13} /> {busy ? "Memproses…" : "Issue Sekarang"}</button>
         </div>
       </div>
     </div>

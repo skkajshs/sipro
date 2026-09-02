@@ -34,7 +34,7 @@ export const PAGE_META = {
   "domain-registry":      { kicker: "Master Data",    title: "Registry Domain Tekstil (Stage · Grade · Konversi)" },
   "product-templates":    { kicker: "Penjualan",      title: "Template & Varian Produk" },
   "approval-inbox":       { kicker: "Persetujuan",      title: "Pusat Persetujuan" },
-  "my-approvals":         { kicker: "Persetujuan",      title: "Persetujuan Saya \u00b7 Matriks Divisi (ACC Desain \u00b7 Sample \u00b7 PO Custom \u00b7 PR)" },
+  "my-approvals":         { kicker: "Persetujuan",      title: "Persetujuan Saya \u00b7 Matriks Divisi (ACC Desain \u00b7 Sample \u00b7 PO Custom \u00b7 PR \u00b7 Klaim Makloon)" },
   "approval-rules":       { kicker: "Pengaturan",     title: "Aturan Persetujuan" },
   "entity-masters":       { kicker: "Pengaturan",     title: "Master per Badan Usaha" },
   "pdf-templates":        { kicker: "Pengaturan",     title: "Desainer Template PDF" },

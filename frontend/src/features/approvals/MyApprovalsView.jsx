@@ -13,14 +13,14 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle, ArrowRight, Check, ClipboardCheck, FileCheck2, Layers3,
+  AlertTriangle, ArrowRight, Check, ClipboardCheck, Factory, FileCheck2, Layers3,
   RefreshCw, ScrollText, ShieldCheck, ShoppingBag, Users2, X,
 } from "lucide-react";
 import ErrorNotice from "../../components/ErrorNotice";
 import { formatCurrency } from "../../utils/formatters";
 import {
-  apiErr, approvalMatrixLog, approvePr, approveSpec, approveSpecialOrder,
-  myApprovalQueue, rejectPr, rejectSpec, rejectSpecialOrder,
+  apiErr, approvalMatrixLog, approveMakloonClaim, approvePr, approveSpec, approveSpecialOrder,
+  myApprovalQueue, rejectMakloonClaim, rejectPr, rejectSpec, rejectSpecialOrder,
 } from "./approvalsMatrixApi";
 
 const STAGE_META = {
@@ -28,6 +28,7 @@ const STAGE_META = {
   sample_acc: { label: "ACC Sample", icon: Layers3, fg: "#0E7490", bg: "#E0F2FE" },
   po_custom: { label: "PO Custom", icon: ShoppingBag, fg: "#B45309", bg: "#FEF3C7" },
   purchase_request: { label: "Permintaan Pembelian", icon: ClipboardCheck, fg: "#1B7F4B", bg: "#E9F7EF" },
+  makloon_claim: { label: "Klaim Selisih Makloon", icon: Factory, fg: "#A8221A", bg: "#FDECEA" },
 };
 
 const MODE_TONE = {
@@ -159,6 +160,8 @@ export default function MyApprovalsView({ currentUser, selectedEntity, onNavigat
           await approvePr(item.id, { notes: form.note });
         } else if (item.stage === "po_custom") {
           await approveSpecialOrder(item.id, { notes: form.note });
+        } else if (item.stage === "makloon_claim") {
+          await approveMakloonClaim(item.id, { step_seq: item.step_seq, note: form.note });
         }
       } else {
         if (item.stage === "design_acc") {
@@ -167,6 +170,8 @@ export default function MyApprovalsView({ currentUser, selectedEntity, onNavigat
           await rejectPr(item.id, { notes: form.reason });
         } else if (item.stage === "po_custom") {
           await rejectSpecialOrder(item.id, { reason: form.reason });
+        } else if (item.stage === "makloon_claim") {
+          await rejectMakloonClaim(item.id, { step_seq: item.step_seq, reason: form.reason });
         }
       }
       setModal(null);
@@ -251,7 +256,7 @@ export default function MyApprovalsView({ currentUser, selectedEntity, onNavigat
           </div>
         </div>
         <div className="section-body">
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
             {(data?.stages || []).map((s) => (
               <StageCard key={s.stage} stage={s.stage} count={counts[s.stage] || 0}
                 active={stage === s.stage}
@@ -293,7 +298,7 @@ export default function MyApprovalsView({ currentUser, selectedEntity, onNavigat
                     const Icon = meta.icon || ShieldCheck;
                     const isSample = it.stage === "sample_acc";
                     return (
-                      <tr key={`${it.stage}-${it.id}`} data-testid={`my-approvals-row-${it.id}`}
+                      <tr key={`${it.stage}-${it.id}-${it.step_seq || 0}`} data-testid={`my-approvals-row-${it.id}`}
                         className="align-top">
                         <td className="py-2 pr-3">
                           <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold"
@@ -302,7 +307,7 @@ export default function MyApprovalsView({ currentUser, selectedEntity, onNavigat
                           </span>
                         </td>
                         <td className="py-2 pr-3">
-                          <div className="font-semibold text-[#1C1C1E]">{it.number}</div>
+                          <div className="font-semibold text-[#1C1C1E]">{it.number}{it.step_seq ? <span className="ml-1 text-[10px] font-normal text-[#8E8E93]">langkah {it.step_seq}</span> : null}</div>
                           <div className="text-[11px] text-[#6B6B73]">{it.title}</div>
                           {it.customer_name && (
                             <div className="text-[10.5px] text-[#8E8E93]">{it.customer_name}</div>

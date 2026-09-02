@@ -39,6 +39,13 @@ export const approveSpecialOrder = (id, body) =>
 export const rejectSpecialOrder = (id, body) =>
   axios.post(`${API}/special-orders/${id}/reject`, body).then((r) => r.data);
 
+// T8 — klaim selisih makloon menempel pada langkah SPK (butuh `step_seq`).
+export const approveMakloonClaim = (id, body) =>
+  axios.post(`${API}/makloon-orders/${id}/claim/approve`, body).then((r) => r.data);
+
+export const rejectMakloonClaim = (id, body) =>
+  axios.post(`${API}/makloon-orders/${id}/claim/reject`, body).then((r) => r.data);
+
 /** Pesan galat yang bisa dibaca pemilik usaha (bukan stack trace). */
 export function apiErr(e, fallback = "Terjadi kesalahan.") {
   return e?.response?.data?.detail || e?.message || fallback;

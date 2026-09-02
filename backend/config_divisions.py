@@ -95,6 +95,15 @@ APPROVER_MATRIX: List[Dict[str, Any]] = [
      "doc_type": "purchase_requisition", "doc_label": "Permintaan Pembelian",
      "collection": "purchase_requisitions", "view": "purchase-requisitions",
      "levels": [{"level": 1, "label": "Manager", "roles": ["manager", "admin"]}]},
+    # T8 (audit training L5/PP) — klaim selisih makloon menempel pada langkah SPK
+    # (`steps[].claim.status == pending_approval`); tanpa tahap ini manajer yang hanya
+    # memantau "Persetujuan Saya" tidak pernah melihatnya.
+    {"stage": "makloon_claim", "label": "Klaim Selisih Makloon",
+     "approvers": ["Manager"],
+     "note": "Keputusan klaim hasil makloon kurang dari estimasi (potong bon / ganti rugi / terima dengan catatan).",
+     "doc_type": "makloon_claim", "doc_label": "Klaim Selisih Makloon",
+     "collection": "makloon_orders", "view": "makloon-claims",
+     "levels": [{"level": 1, "label": "Manager", "roles": ["manager", "admin"]}]},
 ]
 
 STAGE_BY_ID: Dict[str, Dict[str, Any]] = {s["stage"]: s for s in APPROVER_MATRIX}

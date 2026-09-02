@@ -28,8 +28,8 @@
 | # | Kasus | Temuan |
 |---|-------|--------|
 | T6 | H5 | Pagar lini bekerja (papan menyusut, PATCH lini lain 403 ber-pesan benar), tetapi lencana **"akses lini terbatas" tidak tampil**: API mengirim `line_restricted` ARRAY, layar menunggu boolean (`po-board-line-restricted`). |
-| T7 | L4b | Makloon hasil KURANG dari estimasi tetap menutup order (`completed`), bukan "Sebagian" — status dihitung dari tahap diterima, bukan kuantitas. Klaim selisihnya sendiri terbuka otomatis dengan hitungan benar. |
-| T8 | L5/PP | `GET /api/approvals/my-queue` tidak memuat `makloon_claim` (dan jenis lain yang ada di `/approvals/backlog`) — manajer bisa melewatkan klaim bila hanya memantau "Persetujuan Saya". |
+| T7 | L4b | Makloon hasil KURANG dari estimasi tetap menutup order (`completed`), bukan "Sebagian" — status dihitung dari tahap diterima, bukan kuantitas. Klaim selisihnya sendiri terbuka otomatis dengan hitungan benar.  **✅ SELESAI 2026-09-02 (iter280)** — `_recompute_status_and_costing`: klaim open/pending_approval menahan status `partially_received` + `completion_hold`; keputusan klaim (`_save`) membuka ke `completed`. Bonus: IssueModal tampilkan stok per gudang, 409 menuntun bila bahan kurang. |
+| T8 | L5/PP | `GET /api/approvals/my-queue` tidak memuat `makloon_claim` (dan jenis lain yang ada di `/approvals/backlog`) — manajer bisa melewatkan klaim bila hanya memantau "Persetujuan Saya".  **✅ SELESAI 2026-09-02 (iter280)** — stage `makloon_claim` di APPROVER_MATRIX + `my_queue`; kartu "Klaim Selisih Makloon" di Persetujuan Saya dengan approve/reject per `step_seq`. |
 | T9 | G2 | Saran Reorder memuat produk R&D yang PASTI ditolak saat dibuat PR ("belum dirilis ke produksi") dan tidak membawa `warehouse_id` yang diwajibkan PR/realize-PO. |
 
 ## 🟢 MINOR (kode)
@@ -69,5 +69,5 @@
 ## Urutan pengerjaan
 1. ~~T1 (gerbang confirm)~~ — SELESAI: gerbang default ON + gerbang persetujuan manajer.
 2. ~~T2 (PIN sales_admin) + T3 (isolasi detail inspeksi)~~ — SELESAI.
-3. ~~T4~~ (iter278) · ~~T5~~ (iter279) — SELESAI. **BERIKUTNYA:** T6–T9 (T6 lencana lini sudah array-aware di `PoBoardView` — cek ulang saja), T10–T11.
+3. ~~T4~~ (iter278) · ~~T5~~ (iter279) · ~~T7–T8~~ (iter280) — SELESAI. **BERIKUTNYA:** T9 (saran reorder R&D/warehouse_id), T10–T11; T6 sudah array-aware di `PoBoardView`.
 4. Paket seed demo (D1–D5) supaya sesi training bisa mengikuti dokumen apa adanya.

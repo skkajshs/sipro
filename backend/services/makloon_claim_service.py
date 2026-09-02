@@ -235,6 +235,14 @@ async def _close_claim_notices(mko_id: str, outcome: str, actor: str) -> None:
 
 
 async def _save(order: Dict[str, Any]) -> None:
+    # T7 — keputusan klaim bisa MEMBUKA kunci penyelesaian SPK (Sebagian → Selesai).
+    from services.makloon_order_service import _recompute_status_and_costing
+    before = order.get("status")
+    _recompute_status_and_costing(order)
+    if before != order.get("status") and order.get("status") == "completed":
+        order.setdefault("timeline", []).append({
+            "at": now_iso(), "event": "completed",
+            "note": "Klaim selisih diputus — SPK selesai (status Sebagian dibuka)."})
     order["updated_at"] = now_iso()
     order["claim_summary"] = summarize(order)
     await db[COLL].replace_one({"id": order["id"]}, order)

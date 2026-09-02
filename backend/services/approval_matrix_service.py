@@ -433,6 +433,29 @@ async def my_queue(actor: Dict[str, Any], entity_id: str = "",
                               "quantity": _as_float(ci.get("quantity")),
                               "unit": ci.get("unit", "")})
 
+    if not want or want == "makloon_claim":
+        cur = db.makloon_orders.find({**base, "steps.claim.status": "pending_approval"},
+                                     {"_id": 0}).sort("updated_at", -1)
+        for d in await cur.to_list(200):
+            for s in d.get("steps") or []:
+                cl = s.get("claim") or {}
+                if cl.get("status") != "pending_approval":
+                    continue
+                doc = {**d, "number": d.get("mko_number", ""), "created_by": cl.get("proposed_by", "")}
+                await _add("makloon_claim", doc,
+                           title=(f"Langkah {s.get('seq')} · {s.get('makloon_name') or 'mitra'} · "
+                                  f"{(cl.get('action') or '').replace('_', ' ')} · "
+                                  f"{cl.get('message') or cl.get('reason') or ''}").strip(" ·"),
+                           amount=_as_float(cl.get("amount")),
+                           requester=cl.get("proposed_by") or "",
+                           since=cl.get("proposed_at") or cl.get("opened_at") or d.get("updated_at") or "",
+                           extra={"step_seq": int(s.get("seq") or 0),
+                                  "claim_action": cl.get("action", ""),
+                                  "claim_reason": cl.get("reason", ""),
+                                  "makloon_name": s.get("makloon_name", ""),
+                                  "shortfall_qty": _as_float(cl.get("shortfall_qty")),
+                                  "unit": cl.get("unit", "")})
+
     items.sort(key=lambda x: (not x["can_decide"], -x["days_waiting"], x["stage"]))
     counts = {s["stage"]: 0 for s in APPROVER_MATRIX}
     actionable = 0
@@ -474,6 +497,8 @@ _ENDPOINTS = {
                   "POST /api/special-orders/{id}/reject"],
     "purchase_request": ["POST /api/purchase-requisitions/{id}/approve",
                          "POST /api/purchase-requisitions/{id}/reject"],
+    "makloon_claim": ["POST /api/makloon-orders/{id}/claim/approve",
+                      "POST /api/makloon-orders/{id}/claim/reject"],
 }
 
 

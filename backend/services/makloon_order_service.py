@@ -571,6 +571,40 @@ async def _spawn_material_po(payload, mat_snap, qty, entity_id, actor_name, mko_
 
 # ─── Issue ───────────────────────────────────────────────────────────────────
 
+async def _source_stock_rows(product_id: str, entity_id: str) -> List[Dict[str, Any]]:
+    """Stok `available` bahan per gudang MILIK entitas SPK — dasar pilihan gudang issue."""
+    rows = await db.inventory_balances.find(
+        {"product_id": product_id, "owner_entity_id": entity_id, "available_qty": {"$gt": 0}},
+        {"_id": 0, "warehouse_id": 1, "available_qty": 1}).to_list(200)
+    whs = {w["id"]: w for w in await db.warehouses.find({}, {"_id": 0, "id": 1, "name": 1, "code": 1}).to_list(200)}
+    out = [{"warehouse_id": r["warehouse_id"], "warehouse_name": whs.get(r["warehouse_id"], {}).get("name", r["warehouse_id"]),
+            "warehouse_code": whs.get(r["warehouse_id"], {}).get("code", ""),
+            "available_qty": round(float(r.get("available_qty") or 0), 2)} for r in rows]
+    out.sort(key=lambda x: -x["available_qty"])
+    return out
+
+
+async def _assert_source_stock(product_id: str, wh: str, entity_id: str, qty: float,
+                               step: Dict[str, Any]) -> None:
+    """Pesan 409 yang MENUNTUN bila bahan di gudang asal tidak cukup (bukan angka telanjang)."""
+    rows = await _source_stock_rows(product_id, entity_id)
+    here = next((r for r in rows if r["warehouse_id"] == wh), None)
+    have = here["available_qty"] if here else 0.0
+    if have + 0.01 >= qty:
+        return
+    whdoc = await db.warehouses.find_one({"id": wh}, {"_id": 0, "name": 1}) or {}
+    ent = await db.business_entities.find_one({"id": entity_id}, {"_id": 0, "short_name": 1, "legal_name": 1}) or {}
+    unit = step.get("input_unit") or ""
+    others = [r for r in rows if r["warehouse_id"] != wh]
+    hint = (" Gudang lain yang punya stok: " + "; ".join(
+        f"{r['warehouse_name']} {r['available_qty']:g} {unit}" for r in others[:3]) + "."
+        if others else " Tidak ada gudang lain yang menyimpan bahan ini atas nama badan usaha tersebut — terima barang masuk/transfer lebih dulu.")
+    raise HTTPException(status_code=409, detail=(
+        f"Bahan {step.get('input_name') or product_id} di {whdoc.get('name') or wh} milik "
+        f"{ent.get('short_name') or ent.get('legal_name') or entity_id} hanya tersedia {have:g} {unit}, "
+        f"butuh {qty:g} {unit} untuk langkah {step.get('seq')}.{hint}"))
+
+
 async def issue_step(mko_id: str, seq: int, *, from_warehouse_id: str = "",
                      doc_uom: str = "", doc_qty: Any = 0,
                      actor_name: str = "system") -> Dict[str, Any]:
@@ -600,6 +634,7 @@ async def issue_step(mko_id: str, seq: int, *, from_warehouse_id: str = "",
         raise HTTPException(status_code=400, detail="Gudang sumber bahan wajib diisi")
     input_pid = step["input_product_id"]
     input_qty = round(float(step["input_qty"] or 0), 2)
+    await _assert_source_stock(input_pid, wh, order["entity_id"], input_qty, step)
 
     # FASE D (PS-08/D-07) — mitra boleh memakai satuan sendiri (kg/bale/roll):
     # konversi ke satuan dasar + SIMPAN JEJAK. Bila diisi, qty dokumen menang.
@@ -1082,8 +1117,24 @@ async def _next_service_bill_no() -> str:
 def _recompute_status_and_costing(order: Dict[str, Any]) -> None:
     steps = order.get("steps", [])
     received = [s for s in steps if s.get("status") == "received"]
+    # T7 (audit training L4b) — hasil KURANG dari estimasi (klaim selisih masih
+    # terbuka/menunggu ACC) TIDAK boleh menutup SPK: statusnya "Sebagian" sampai
+    # klaimnya diputus (potong bon / ganti rugi / terima dengan catatan / ditolak).
+    unsettled = [int(s.get("seq") or 0) for s in received
+                 if (s.get("claim") or {}).get("status") in ("open", "pending_approval")]
     if len(received) == len(steps) and steps:
-        order["status"] = COMPLETED
+        if unsettled:
+            order["status"] = PARTIAL
+            order["completion_hold"] = {
+                "reason": "claim_unsettled", "steps": unsettled,
+                "message": (f"Semua langkah sudah diterima, tetapi hasil langkah "
+                            f"{', '.join(str(x) for x in unsettled)} kurang dari estimasi dan "
+                            "klaim selisihnya belum diputus. SPK berstatus Sebagian sampai "
+                            "manajer memutuskan klaim (potong bon / ganti rugi / terima dengan catatan)."),
+            }
+        else:
+            order["status"] = COMPLETED
+            order["completion_hold"] = None
     elif received:
         order["status"] = PARTIAL
     elif any(s.get("status") == "issued" for s in steps):
@@ -1212,6 +1263,9 @@ async def makloon_order_detail(mko_id: str) -> Optional[Dict[str, Any]]:
         s["material_flow"] = flow
         if s.get("status") == "pending":
             s["next_action"] = "record_service" if flow == FLOW_SERVICE else "issue"
+            # Layar Issue perlu TAHU di gudang mana bahan (milik entitas SPK) benar-benar ada.
+            if flow != FLOW_SERVICE and s.get("input_product_id"):
+                s["source_stock"] = await _source_stock_rows(s["input_product_id"], o.get("entity_id", ""))
         elif s.get("status") == "issued":
             s["next_action"] = "receive"
         else:
